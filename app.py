@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 from flask import Flask, render_template, redirect, url_for, flash, request, send_file
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, login_user, login_required, logout_user, current_user
@@ -82,7 +82,7 @@ def create_app():
         tournaments = Tournament.query.filter_by(user_id=current_user.id).order_by(Tournament.created_at.desc()).all()
         return render_template('my_tournaments.html', tournaments=tournaments)
 
-    @app.route('/new-tournament', methods=['GET', 'POST'])
+    @app.route('/new_tournament', methods=['GET', 'POST'])
     @login_required
     def new_tournament():
         form = NewTournamentForm()
@@ -101,6 +101,19 @@ def create_app():
             # Completar com BYE
             while len(input_players) < size:
                 input_players.append('BYE')
+
+            # NOVO: ler início e intervalo
+            start_dt = None
+            if form.start_datetime.data:
+                try:
+                    # datetime-local envia "YYYY-MM-DDTHH:MM"
+                    start_dt = datetime.fromisoformat(form.start_datetime.data)
+                except Exception:
+                    start_dt = None
+
+            interval_minutes = form.interval_minutes.data if form.interval_minutes.data is not None else None
+            if interval_minutes is not None and interval_minutes < 0:
+                interval_minutes = 0
 
             # Criar o torneio
             t = Tournament(
@@ -122,14 +135,28 @@ def create_app():
             db.session.flush()
 
             # Gerar chaveamento
-            matches = generate_bracket_with_byes(db, t, player_objs, randomize=form.randomize.data)
+            generate_bracket_with_byes(db, t, player_objs, randomize=form.randomize.data)
+
+            # NOVO: definir horários da primeira rodada
+            if start_dt:
+                # obter 1ª rodada (round_number = 1) ordenada
+                first_round_matches = Match.query.filter_by(tournament_id=t.id, round_number=1)\
+                                                .order_by(Match.position_in_round.asc()).all()
+                current_time = start_dt
+                for idx, m in enumerate(first_round_matches):
+                    # Definir date_time do match
+                    m.date_time = current_time
+                    db.session.add(m)
+                    # Avançar o relógio
+                    if interval_minutes and interval_minutes > 0:
+                        current_time = current_time + timedelta(minutes=interval_minutes)
 
             db.session.commit()
             flash('Torneio criado com sucesso!', 'success')
             return redirect(url_for('tournament_detail', tournament_id=t.id))
 
         return render_template('new_tournament.html', form=form)
-
+    
     @app.route('/tournament/<int:tournament_id>', methods=['GET', 'POST'])
     @login_required
     def tournament_detail(tournament_id):

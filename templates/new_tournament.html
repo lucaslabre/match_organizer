@@ -4,38 +4,52 @@
 <div class="card shadow-sm">
   <div class="card-body">
     <form method="POST">
-      {{ form.hidden_tag() }}
-      <div class="row g-3">
-        <div class="col-md-6">
-          {{ form.name.label(class="form-label") }}
-          {{ form.name(class="form-control", placeholder="Ex: 3ª Copa Tênis House") }}
-        </div>
-        <div class="col-md-6">
-          {{ form.stage.label(class="form-label") }}
-          {{ form.stage(class="form-control", placeholder="Ex: Etapa Gustavo P. Alvarez") }}
-        </div>
-        <div class="col-md-4">
-          {{ form.size.label(class="form-label") }}
-          {{ form.size(class="form-select") }}
-        </div>
-        <div class="col-md-8 d-flex align-items-end">
-          <div class="form-check">
-            {{ form.randomize(class="form-check-input", id="randomizeCheck") }}
-            <label for="randomizeCheck" class="form-check-label">Jogos aleatórios</label>
-          </div>
-        </div>
-      </div>
+        {{ form.hidden_tag() }}
+        <div class="row g-3">
+            <div class="col-md-6">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control", placeholder="Ex: 3ª Copa Tênis House") }}
+            </div>
+            <div class="col-md-6">
+                {{ form.stage.label(class="form-label") }}
+                {{ form.stage(class="form-control", placeholder="Ex: Etapa Gustavo P. Alvarez") }}
+            </div>
 
-      <hr>
-      <h5 class="mb-3">Jogadores</h5>
-      <div class="row g-2" id="players-container">
-        <!-- Campos de jogadores gerados com base no tamanho -->
-      </div>
+            <div class="col-md-3">
+                {{ form.size.label(class="form-label") }}
+                {{ form.size(class="form-select") }}
+            </div>
 
-      <div class="mt-4 d-flex gap-2">
-        {{ form.submit(class="btn btn-success btn-lg") }}
-        <a href="{{ url_for('my_tournaments') }}" class="btn btn-outline-secondary">Cancelar</a>
-      </div>
+            <div class="col-md-4">
+                <label class="form-label">Início do Torneio</label>
+                <input type="datetime-local" name="{{ form.start_datetime.name }}" id="{{ form.start_datetime.id }}" class="form-control">
+                <div class="form-text">Usado como default para a 1ª rodada</div>
+            </div>
+
+            <div class="col-md-3">
+                {{ form.interval_minutes.label(class="form-label") }}
+                {{ form.interval_minutes(class="form-control", placeholder="Ex: 60") }}
+                <div class="form-text">Minutos entre jogos da 1ª rodada</div>
+            </div>
+
+            <div class="col-md-2 d-flex align-items-end">
+                <div class="form-check">
+                {{ form.randomize(class="form-check-input", id="randomizeCheck") }}
+                <label for="randomizeCheck" class="form-check-label">Jogos aleatórios</label>
+                </div>
+            </div>
+        </div>
+
+        <hr>
+        <h5 class="mb-3">Jogadores</h5>
+        <div class="row g-2" id="players-container">
+            <!-- Campos de jogadores gerados com base no tamanho -->
+        </div>
+
+        <div class="mt-4 d-flex gap-2">
+            {{ form.submit(class="btn btn-success btn-lg") }}
+            <a href="{{ url_for('my_tournaments') }}" class="btn btn-outline-secondary">Cancelar</a>
+        </div>
     </form>
   </div>
 </div>
