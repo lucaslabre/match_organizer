@@ -18,8 +18,9 @@ class NewTournamentForm(FlaskForm):
     name = StringField('Nome do Torneio', validators=[DataRequired(), Length(max=200)])
     stage = StringField('Etapa', validators=[Optional(), Length(max=200)])
     size = SelectField('Quantidade de Jogadores', choices=[('4', '4'), ('8', '8'), ('16', '16')], validators=[DataRequired()])
-    start_datetime = StringField('Início do Torneio (data e hora)', validators=[Optional()])  # receberá ISO de datetime-local
+    start_datetime = StringField('Início do Torneio (data e hora)', validators=[Optional()])
     interval_minutes = IntegerField('Intervalo entre jogos (min)', validators=[Optional(), NumberRange(min=0, max=1440)])
+    num_courts = IntegerField('Número de quadras', validators=[Optional(), NumberRange(min=1, max=64)])  # NOVO
     randomize = BooleanField('Gerar jogos aleatoriamente?')
     submit = SubmitField('Gerar Torneio')
 

@@ -32,7 +32,13 @@
                 <div class="form-text">Minutos entre jogos da 1ª rodada</div>
             </div>
 
-            <div class="col-md-2 d-flex align-items-end">
+            <div class="col-md-2">
+                {{ form.num_courts.label(class="form-label") }}
+                {{ form.num_courts(class="form-control", placeholder="Ex: 4") }}
+                <div class="form-text">Jogos simultâneos por horário</div>
+            </div>
+
+            <div class="col-md-3 d-flex align-items-end">
                 <div class="form-check">
                 {{ form.randomize(class="form-check-input", id="randomizeCheck") }}
                 <label for="randomizeCheck" class="form-check-label">Jogos aleatórios</label>

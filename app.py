@@ -91,31 +91,32 @@ def create_app():
             stage = form.stage.data.strip()
             size = int(form.size.data)
 
-            # Coletar jogadores a partir de inputs HTML (não WTForms)
+            # Jogadores vindos dos inputs HTML
             input_players = []
             for i in range(size):
                 raw = request.form.get(f'player_{i+1}', '').strip()
                 if raw:
                     input_players.append(raw)
-
-            # Completar com BYE
             while len(input_players) < size:
                 input_players.append('BYE')
 
-            # NOVO: ler início e intervalo
+            # Leitura dos novos campos
             start_dt = None
             if form.start_datetime.data:
                 try:
-                    # datetime-local envia "YYYY-MM-DDTHH:MM"
                     start_dt = datetime.fromisoformat(form.start_datetime.data)
                 except Exception:
                     start_dt = None
 
-            interval_minutes = form.interval_minutes.data if form.interval_minutes.data is not None else None
-            if interval_minutes is not None and interval_minutes < 0:
+            interval_minutes = form.interval_minutes.data if form.interval_minutes.data is not None else 0
+            if interval_minutes is None or interval_minutes < 0:
                 interval_minutes = 0
 
-            # Criar o torneio
+            num_courts = form.num_courts.data if form.num_courts.data is not None else 1
+            if num_courts is None or num_courts < 1:
+                num_courts = 1
+
+            # Criar torneio
             t = Tournament(
                 user_id=current_user.id,
                 name=name,
@@ -134,22 +135,25 @@ def create_app():
                 player_objs.append(player)
             db.session.flush()
 
-            # Gerar chaveamento
+            # Gerar chave
             generate_bracket_with_byes(db, t, player_objs, randomize=form.randomize.data)
 
-            # NOVO: definir horários da primeira rodada
+            # NOVO: agendar 1ª rodada em paralelo por quadra
             if start_dt:
-                # obter 1ª rodada (round_number = 1) ordenada
                 first_round_matches = Match.query.filter_by(tournament_id=t.id, round_number=1)\
                                                 .order_by(Match.position_in_round.asc()).all()
-                current_time = start_dt
+                # Distribuição em blocos: a cada 'num_courts' jogos, avança o horário
+                # Ex.: 4 quadras => jogos 0..3 às 09:00; 4..7 às 10:00; etc.
                 for idx, m in enumerate(first_round_matches):
-                    # Definir date_time do match
-                    m.date_time = current_time
+                    block = idx // num_courts              # qual "slot" (0, 1, 2, ...)
+                    slot_time = start_dt + timedelta(minutes=block * interval_minutes)
+                    m.date_time = slot_time
+
+                    # Se quiser salvar a quadra (requer coluna 'court' em Match):
+                    # court_number = (idx % num_courts) + 1
+                    # m.court = court_number
+
                     db.session.add(m)
-                    # Avançar o relógio
-                    if interval_minutes and interval_minutes > 0:
-                        current_time = current_time + timedelta(minutes=interval_minutes)
 
             db.session.commit()
             flash('Torneio criado com sucesso!', 'success')
