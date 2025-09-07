@@ -1,0 +1,7 @@
+/* Estilos simples para melhorar a UI */
+body {
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", "Apple Color Emoji", "Segoe UI Emoji";
+}
+.card .card-header {
+  font-weight: 600;
+}

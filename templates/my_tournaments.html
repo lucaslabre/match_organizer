@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <h3>Meus Torneios</h3>
+  <a href="{{ url_for('new_tournament') }}" class="btn btn-primary">
+    Novo Torneio
+  </a>
+</div>
+
+{% if tournaments %}
+  <div class="row g-3">
+    {% for t in tournaments %}
+      <div class="col-md-6 col-lg-4">
+        <div class="card h-100 shadow-sm">
+          <div class="card-body">
+            <h5 class="card-title">{{ t.name }}</h5>
+            <p class="card-text text-muted">
+              Etapa: {{ t.stage or '—' }}<br>
+              Jogadores: {{ t.size }}<br>
+              Criado em: {{ t.created_at.strftime('%d/%m/%Y %H:%M') }}
+            </p>
+            <a href="{{ url_for('tournament_detail', tournament_id=t.id) }}" class="btn btn-outline-primary w-100">Abrir</a>
+          </div>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="text-center p-5 bg-white border rounded">
+    <p class="mb-0 text-muted">Você ainda não criou nenhum torneio.</p>
+  </div>
+{% endif %}
+{% endblock %}

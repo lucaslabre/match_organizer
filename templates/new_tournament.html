@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block content %}
+<h3 class="mb-3">Novo Torneio</h3>
+<div class="card shadow-sm">
+  <div class="card-body">
+    <form method="POST">
+      {{ form.hidden_tag() }}
+      <div class="row g-3">
+        <div class="col-md-6">
+          {{ form.name.label(class="form-label") }}
+          {{ form.name(class="form-control", placeholder="Ex: 3ª Copa Tênis House") }}
+        </div>
+        <div class="col-md-6">
+          {{ form.stage.label(class="form-label") }}
+          {{ form.stage(class="form-control", placeholder="Ex: Etapa Gustavo P. Alvarez") }}
+        </div>
+        <div class="col-md-4">
+          {{ form.size.label(class="form-label") }}
+          {{ form.size(class="form-select") }}
+        </div>
+        <div class="col-md-8 d-flex align-items-end">
+          <div class="form-check">
+            {{ form.randomize(class="form-check-input", id="randomizeCheck") }}
+            <label for="randomizeCheck" class="form-check-label">Jogos aleatórios</label>
+          </div>
+        </div>
+      </div>
+
+      <hr>
+      <h5 class="mb-3">Jogadores</h5>
+      <div class="row g-2" id="players-container">
+        <!-- Campos de jogadores gerados com base no tamanho -->
+      </div>
+
+      <div class="mt-4 d-flex gap-2">
+        {{ form.submit(class="btn btn-success btn-lg") }}
+        <a href="{{ url_for('my_tournaments') }}" class="btn btn-outline-secondary">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  const sizeSelect = document.getElementById("{{ form.size.id }}");
+  const playersContainer = document.getElementById("players-container");
+
+  function renderPlayerFields(size) {
+    playersContainer.innerHTML = "";
+    for (let i = 1; i <= parseInt(size); i++) {
+      const col = document.createElement('div');
+      col.className = "col-md-4";
+      col.innerHTML = `
+        <label class="form-label">Jogador ${i}</label>
+        <input type="text" name="player_${i}" class="form-control" placeholder="Nome do jogador (ou deixe em branco para BYE)">
+      `;
+      playersContainer.appendChild(col);
+    }
+  }
+
+  sizeSelect.addEventListener('change', (e) => renderPlayerFields(e.target.value));
+  renderPlayerFields(sizeSelect.value);
+</script>
+{% endblock %}

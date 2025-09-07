@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-md-6 col-lg-5">
+    <div class="card shadow-sm">
+      <div class="card-body p-4">
+        <h3 class="mb-3 text-center">Criar conta</h3>
+        <form method="POST">
+          {{ form.hidden_tag() }}
+          <div class="mb-3">
+            {{ form.name.label(class="form-label") }}
+            {{ form.name(class="form-control", placeholder="Seu nome") }}
+          </div>
+          <div class="mb-3">
+            {{ form.email.label(class="form-label") }}
+            {{ form.email(class="form-control", placeholder="voce@email.com") }}
+          </div>
+          <div class="mb-3">
+            {{ form.password.label(class="form-label") }}
+            {{ form.password(class="form-control", placeholder="Senha (mín. 6)") }}
+          </div>
+          <div class="mb-3">
+            {{ form.confirm.label(class="form-label") }}
+            {{ form.confirm(class="form-control", placeholder="Confirmar senha") }}
+          </div>
+          <div class="d-grid">
+            {{ form.submit(class="btn btn-success btn-lg") }}
+          </div>
+        </form>
+        <hr>
+        <p class="text-center mb-0">Já tem conta? <a href="{{ url_for('login') }}">Entrar</a></p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

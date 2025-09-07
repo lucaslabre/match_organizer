@@ -1,0 +1,393 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .bracket-container {
+    position: relative;
+    overflow-x: auto;
+    padding-bottom: 24px;
+  }
+  .bracket-grid {
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(280px, 360px);
+    gap: 40px;
+    align-items: start;
+  }
+  .round-column {
+    position: relative;
+  }
+  .round-title {
+    font-weight: 700;
+    color: #1f4aa8;
+    margin-bottom: 12px;
+  }
+  .match-card {
+    position: relative;
+    background: #fff;
+    border: 1px solid #e3e6ef;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(30, 41, 59, 0.06);
+    margin-bottom: 16px;
+    padding: 10px 12px;
+  }
+  .match-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #6c757d;
+    font-size: 12px;
+    margin-bottom: 6px;
+  }
+  .match-players {
+    display: grid;
+    gap: 8px;
+  }
+  .player-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8fafc;
+    border: 1px solid #eef2f7;
+    border-radius: 8px;
+    padding: 8px 10px;
+    min-height: 44px;
+  }
+  .player-name {
+    font-weight: 600;
+    color: #1f2937;
+  }
+  .player-empty {
+    color: #9aa4b2;
+    font-style: italic;
+  }
+  .match-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .badge-soft {
+    background: #eef6ff;
+    color: #1d4ed8;
+    border: 1px solid #dbeafe;
+    font-weight: 600;
+  }
+  .badge-score {
+    background: #ecfdf5;
+    color: #047857;
+    border: 1px solid #bbf7d0;
+    font-weight: 700;
+  }
+  .winner-badge {
+    background: #eef2ff;
+    color: #4338ca;
+    border: 1px solid #e0e7ff;
+    font-weight: 600;
+  }
+  .edit-btn {
+    padding: 2px 8px;
+    font-size: 12px;
+  }
+
+  /* Conexões (linhas) entre partidas */
+  .connector {
+    position: absolute;
+    height: 2px;
+    background: #cbd5e1;
+  }
+  .connector-vert {
+    position: absolute;
+    width: 2px;
+    background: #cbd5e1;
+  }
+
+  /* Responsivo */
+  @media (max-width: 768px) {
+    .bracket-grid {
+      grid-auto-columns: minmax(260px, 1fr);
+      gap: 24px;
+    }
+  }
+</style>
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+  <div>
+    <h3 class="mb-0">{{ tournament.name }}</h3>
+    <div class="text-muted">Etapa: {{ tournament.stage or '—' }} | Jogadores: {{ tournament.size }}</div>
+  </div>
+  <div class="d-flex gap-2">
+    <a href="{{ url_for('tournament_image', tournament_id=tournament.id) }}" class="btn btn-outline-secondary">
+      Gerar Imagem 1920x1080
+    </a>
+    <a href="{{ url_for('my_tournaments') }}" class="btn btn-outline-primary">Voltar</a>
+  </div>
+</div>
+
+<div class="bracket-container">
+  <div class="bracket-grid" id="bracketGrid">
+    {% set max_round = rounds|map(attribute='0')|list %}
+    {% for r, matches in rounds.items() %}
+      {% set sorted_matches = matches|sort(attribute='position_in_round') %}
+      <div class="round-column" data-round="{{ r }}">
+        <div class="round-title">Rodada {{ r }}</div>
+
+        {% for m in sorted_matches %}
+            {% set p1 = (m.player1_id and tournament.players|selectattr('id','equalto',m.player1_id)|list|first) %}
+            {% set p2 = (m.player2_id and tournament.players|selectattr('id','equalto',m.player2_id)|list|first) %}
+            <div class="match-card" id="match-{{ m.id }}"
+                data-match-id="{{ m.id }}"
+                data-next-match-id="{{ m.next_match_id or '' }}"
+                data-next-slot="{{ m.next_match_slot or '' }}">
+            <div class="match-header">
+                <div>Match #{{ m.id }}</div>
+                <div class="d-flex gap-1">
+                <a class="btn btn-sm btn-outline-success edit-btn" href="{{ url_for('edit_match', match_id=m.id) }}">Resultado</a>
+                </div>
+            </div>
+
+            <div class="match-players mb-2">
+                <div class="player-row">
+                <div class="player-name">
+                    {{ p1.name if p1 else (m.player1_placeholder or '—') }}
+                </div>
+                </div>
+                <div class="player-row">
+                <div class="player-name">
+                    {{ p2.name if p2 else (m.player2_placeholder or '—') }}
+                </div>
+                </div>
+            </div>
+
+            <!-- Form inline para editar data/hora deste match -->
+            <form method="POST" class="d-flex align-items-end gap-2 flex-wrap">
+                {% if csrf_token is defined %}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                {% endif %}
+                <div class="flex-grow-1">
+                <label class="form-label small mb-1">Dia e hora</label>
+                <input type="datetime-local"
+                        class="form-control form-control-sm"
+                        name="match_dt_{{ m.id }}"
+                        value="{{ m.date_time.strftime('%Y-%m-%dT%H:%M') if m.date_time }}">
+                </div>
+                <button type="submit" class="btn btn-sm btn-primary">Salvar</button>
+            </form>
+
+            <div class="match-meta mt-2">
+                {% if m.score %}
+                <span class="badge badge-score rounded-pill">Placar: {{ m.score }}</span>
+                {% endif %}
+                {% if m.winner_player_id or m.winner_name %}
+                <span class="badge winner-badge rounded-pill">
+                    Vencedor:
+                    {% if m.winner_player_id %}
+                    {% set winner_player = (tournament.players | selectattr('id','equalto', m.winner_player_id) | list | first) %}
+                    {{ winner_player.name if winner_player else '—' }}
+                    {% else %}
+                    {{ m.winner_name }}
+                    {% endif %}
+                </span>
+                {% endif %}
+            </div>
+            </div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="accordion my-4" id="editAccordion">
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingPlayers">
+      <button class="accordion-button" type="button" data-bs-toggle="collapse" data-bs-target="#collapsePlayers">
+        Editar Jogadores
+      </button>
+    </h2>
+    <div id="collapsePlayers" class="accordion-collapse collapse show">
+      <div class="accordion-body">
+        <form method="POST">
+          <div class="row g-2">
+            {% for p in tournament.players %}
+              <div class="col-md-6">
+                <label class="form-label">Jogador {{ loop.index }}</label>
+                <input name="player_{{ p.id }}" class="form-control" value="{{ p.name }}">
+              </div>
+            {% endfor %}
+          </div>
+          <div class="mt-3 d-flex justify-content-end">
+            <button class="btn btn-primary">Salvar alterações</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div class="accordion-item">
+    <h2 class="accordion-header" id="headingTimes">
+      <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTimes">
+        Editar Horários
+      </button>
+    </h2>
+    <div id="collapseTimes" class="accordion-collapse collapse">
+      <div class="accordion-body">
+        <form method="POST">
+          <div class="row g-3">
+            {% for r, matches in rounds.items() %}
+              <div class="col-12 mt-2">
+                <h6 class="text-primary">Rodada {{ r }}</h6>
+              </div>
+              {% for m in matches|sort(attribute='position_in_round') %}
+                <div class="col-md-4">
+                  <label class="form-label">Match #{{ m.id }}</label>
+                  <input type="datetime-local" class="form-control" name="match_dt_{{ m.id }}"
+                         value="{{ m.date_time.strftime('%Y-%m-%dT%H:%M') if m.date_time }}">
+                </div>
+              {% endfor %}
+            {% endfor %}
+          </div>
+          <div class="mt-3 d-flex justify-content-end">
+            <button class="btn btn-primary">Salvar horários</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function drawConnectors() {
+    document.querySelectorAll('.connector, .connector-vert').forEach(el => el.remove());
+    const grid = document.getElementById('bracketGrid');
+    const rectGrid = grid.getBoundingClientRect();
+
+    const matches = Array.from(document.querySelectorAll('.match-card'));
+    const byId = {};
+    matches.forEach(m => byId[m.dataset.matchId] = m);
+
+    matches.forEach(m => {
+      const nextId = m.dataset.nextMatchId;
+      const slot = parseInt(m.dataset.nextSlot || '0', 10);
+      if (!nextId || !slot) return;
+
+      const srcRect = m.getBoundingClientRect();
+      const dst = byId[nextId];
+      if (!dst) return;
+
+      const dstRect = dst.getBoundingClientRect();
+
+      const srcCenterY = srcRect.top + srcRect.height / 2 - rectGrid.top;
+      const srcRight = srcRect.right - rectGrid.left;
+
+      const dstLeft = dstRect.left - rectGrid.left;
+      const dstSlotY = slot === 1
+        ? (dstRect.top + dstRect.height * 0.30 - rectGrid.top)
+        : (dstRect.top + dstRect.height * 0.70 - rectGrid.top);
+
+      const midX = (srcRight + dstLeft) / 2;
+
+      const h1 = document.createElement('div');
+      h1.className = 'connector';
+      h1.style.left = srcRight + 'px';
+      h1.style.top = srcCenterY + 'px';
+      h1.style.width = Math.max(0, midX - srcRight) + 'px';
+      grid.appendChild(h1);
+
+      const v = document.createElement('div');
+      v.className = 'connector-vert';
+      v.style.left = midX + 'px';
+      v.style.top = Math.min(srcCenterY, dstSlotY) + 'px';
+      v.style.height = Math.abs(dstSlotY - srcCenterY) + 'px';
+      grid.appendChild(v);
+
+      const h2 = document.createElement('div');
+      h2.className = 'connector';
+      h2.style.left = midX + 'px';
+      h2.style.top = dstSlotY + 'px';
+      h2.style.width = Math.max(0, dstLeft - midX) + 'px';
+      grid.appendChild(h2);
+    });
+  }
+
+  function layoutBracket() {
+    const grid = document.getElementById('bracketGrid');
+    if (!grid) return;
+
+    // 1) Normalize: garantir um espaçamento vertical mínimo em cada coluna
+    const columns = Array.from(grid.querySelectorAll('.round-column'));
+    const colMatches = columns.map(col =>
+      Array.from(col.querySelectorAll('.match-card'))
+    );
+
+    // Ajuste de espaçamento básico por coluna (opcional)
+    colMatches.forEach(matches => {
+      // Remover qualquer translate aplicado em layouts anteriores
+      matches.forEach(m => {
+        m.style.transform = '';
+      });
+    });
+
+    // 2) Centralizar rodadas subsequentes em relação à anterior
+    // Para cada rodada r (a partir de 2), pegamos matches da rodada anterior (r-1) de 2 em 2
+    for (let r = 1; r < columns.length; r++) {
+      const prevMatches = colMatches[r - 1];
+      const currMatches = colMatches[r];
+      if (!prevMatches.length || !currMatches.length) continue;
+
+      // Pegamos as caixas com bounding rect, baseadas no viewport
+      const prevRects = prevMatches.map(m => m.getBoundingClientRect());
+      const currRects = currMatches.map(m => m.getBoundingClientRect());
+
+      // Base top do grid para coordenadas relativas
+      const gridRect = grid.getBoundingClientRect();
+
+      // Para cada match atual i, centralize entre prev[2i] e prev[2i+1]
+      currMatches.forEach((m, i) => {
+        const parentIdxA = 2 * i;
+        const parentIdxB = 2 * i + 1;
+
+        // Se não existir um dos pais (final ou sobras), pula
+        if (parentIdxA >= prevRects.length || parentIdxB >= prevRects.length) return;
+
+        const prevA = prevRects[parentIdxA];
+        const prevB = prevRects[parentIdxB];
+        const curr = m.getBoundingClientRect();
+
+        // Centros dos pais (relativo ao grid)
+        const centerA = prevA.top + prevA.height / 2 - gridRect.top;
+        const centerB = prevB.top + prevB.height / 2 - gridRect.top;
+
+        // Alvo: meio entre centros dos pais
+        const targetCenterY = (centerA + centerB) / 2;
+
+        // Centro atual do match (relativo ao grid)
+        const currCenterY = curr.top + curr.height / 2 - gridRect.top;
+
+        // Quanto precisamos mover (positivos movem para baixo)
+        const deltaY = targetCenterY - currCenterY;
+
+        // Aplicar translateY acumulado (somar ao existente, se houver)
+        const prevTransform = m.style.transform || '';
+        // Se já existe translateY, vamos sobrescrever para evitar acumular ruído
+        m.style.transform = `translateY(${deltaY.toFixed(2)}px)`;
+      });
+    }
+
+    // 3) Após reposicionar, esperar o layout "assentar" e redesenhar conectores
+    // Pequeno timeout para garantir novos bounding rects calculados
+    setTimeout(drawConnectors, 0);
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    // Primeiro desenhamos o layout e depois conectores (drawConnectors é chamado dentro de layoutBracket)
+    setTimeout(layoutBracket, 60);
+    window.addEventListener('resize', () => setTimeout(layoutBracket, 60));
+
+    // Se algo na página mudar altura (ex.: acordeão abre/fecha), recalcule
+    const acc = document.getElementById('editAccordion');
+    if (acc) {
+      acc.addEventListener('shown.bs.collapse', () => setTimeout(layoutBracket, 60));
+      acc.addEventListener('hidden.bs.collapse', () => setTimeout(layoutBracket, 60));
+    }
+  });
+</script>
+{% endblock %}
